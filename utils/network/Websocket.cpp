@@ -2,112 +2,167 @@
 // Created by alexeylebed on 9/26/22.
 //
 
-#include "WebsocketServer.h"
+#include "Websocket.h"
+#include <utility>
 
-bool verify_ssl_certificate(bool preverified, ssl::verify_context& ctx){
-    char subject_name[256];
-    X509* cert = X509_STORE_CTX_get_current_cert(ctx.native_handle());
-    X509_NAME_oneline(X509_get_subject_name(cert), subject_name, 256);
-    cout << "Verifying: " << subject_name << std::endl;
-    cout << "Pre-verified: " << preverified  << endl << endl;
-    return preverified;
+
+auto exception_handler_generator (const string owner){
+    return [owner](std::exception_ptr e){
+        try {
+            if (e) {std::rethrow_exception(e);}
+        } catch(const std::exception& e) {
+            std::cout << "Coro exception " << owner << e.what() << endl;
+        }
+    };
 }
 
-Websocket::Websocket(ssl_stream &stream, asio::io_context& ctx): ws(stream), ctx(ctx) {
-    cout << "Websocket 17, running read" << endl;
-    co_spawn(ctx.get_executor(),
-             [self = shared_from_this()]{ return self->read(); },
-             [](std::exception_ptr e){
-                 try {
-                     if (e) {std::rethrow_exception(e);}
-                 } catch(const std::exception& e) {
-                     cout << "Caught exception \"" << e.what() << endl;
-                 }
-             }
-    );
-}
+WebsocketEvent::WebsocketEvent(string message, WebsocketEventType type, const shared_ptr<Websocket>& ws)
+    :message(std::move(message)), type(type) , ws(ws){}
 
-awaitable<void> Websocket::send(const string &message) {
-     co_await ws.async_write(asio::buffer(message), use_awaitable);
+Websocket::Websocket(tcp::socket socket_, asio::io_context& ctx): socket(std::move(socket_)), ctx(ctx){
+    transport = new ws_stream(socket);
+    pingpong = new PingPong(this);
 }
 
 void Websocket::on_message(const string &message) {
-    cout << "WebsocketServer 34 on_message" << message << endl;
+    cout << "ON_MESSAGE: " << message << endl;
+    if(message == "__pong__") {
+        pingpong->on_received(message);
+        return;
+    }
+
     for(auto subscriber: subscribers){
-        subscriber->handle_message(message);
+        auto event = WebsocketEvent(message, WebsocketEventType::message, shared_ptr<Websocket>(this));
+        subscriber->handle_event(event);
     }
 }
 
-void Websocket::subscribe(WebsocketMessageSubscriber* candidate) {
+void Websocket::send_message(const string& message) {
+    co_spawn(ctx.get_executor(),
+             [self = shared_from_this(), message]{ return self->send(message); },
+             exception_handler_generator("Websocket::send_message")
+    );
+    cout << "Message sent: " << message << endl;
+}
+
+void Websocket::subscribe(WebsocketEventSubscriber* candidate) {
     auto it = find(subscribers.begin(), subscribers.end(), candidate);
-    if(it != subscribers.end()){
+    if(it == subscribers.end()){
         subscribers.push_back(candidate);
     }
 }
 
-void Websocket::unsubscribe(WebsocketMessageSubscriber* candidate) {
+void Websocket::unsubscribe(WebsocketEventSubscriber* candidate) {
     auto it = find(subscribers.begin(), subscribers.end(), candidate);
     if(it != subscribers.end()){
         subscribers.erase(it);
     }
 }
 
-awaitable<void> Websocket::read() {
-    for (;;) {
-        co_await read_once();
-    }
+awaitable<void> Websocket::send(const string &message) {
+    co_await transport->async_write(asio::buffer(message), use_awaitable);
 }
 
-
-awaitable<void> Websocket::read_once() {
-    beast::flat_buffer buffer;
-    co_await ws.async_read(buffer, use_awaitable);
-    std::cout << beast::make_printable(buffer.data()) << std::endl;
-    string res = beast::buffers_to_string(buffer.data());
-    on_message(res);
-}
-
-
-WebsocketManager::WebsocketManager(asio::io_context &ctx, ssl::context &ssl_ctx): ctx(ctx), ssl_ctx(ssl_ctx), acceptor(ctx){
-}
-awaitable<void> WebsocketManager::listener() {
-    cout << "WebsocketManager 84,  listening new connections..." << endl;
-    auto executor = co_await boost::asio::this_coro::executor;
-    tcp::acceptor acceptor(executor, {tcp::v4(), 8080});
-    for (;;) {
-        tcp::socket socket = co_await acceptor.async_accept(use_awaitable);
-        auto stream = ssl_stream(socket, ssl_ctx);
-        ssl_ctx.set_verify_mode(ssl::context::verify_peer | ssl::context::verify_fail_if_no_peer_cert);
-        ssl_ctx.set_default_verify_paths();
-        stream.set_verify_callback(verify_ssl_certificate);
-        co_await stream.async_handshake(ssl::stream_base::server, use_awaitable);
-        cout << "WebsocketManager 94, a new connection established" << endl;
-        add_connection(new Websocket(stream, ctx));
-    }
-
-}
-
-void WebsocketManager::run(){
-    co_spawn(this->ctx.get_executor(),
-             [self = shared_from_this()]{ return self->listener(); },
-             [](std::exception_ptr e){
+void Websocket::read() {
+    co_spawn(ctx.get_executor(),
+             [self = shared_from_this()]{ return self->wait_and_read(); },
+             [self = shared_from_this()](std::exception_ptr e){
                  try {
                      if (e) {std::rethrow_exception(e);}
                  } catch(const std::exception& e) {
-                     cout << "Caught exception \"" << e.what() << endl;
+                     cout << typeid(e).name() << endl;
+                     if(string(e.what()) == "End of file [asio.misc:2]"){
+                         self->status = WebsocketStatus::closed;
+                         auto event = WebsocketEvent(string(e.what()), WebsocketEventType::close, self);
+                         for(auto subscriber: self->subscribers){
+                             subscriber->handle_event(event);
+                         }
+                     }
+                     std::cout << "Coro exception " << "Websocket::read() " << e.what() << endl;
                  }
              }
     );
 }
 
-void WebsocketManager::add_connection(Websocket* connection) {
-    connections.push_back(connection);
-}
-
-void WebsocketManager::remove_connection(Websocket* connection) {
-    for(auto it = connections.begin(); it != connections.end(); it++){
-        if(*it == connection){
-            connections.erase(it);
+awaitable<void> Websocket::wait_and_read() {
+    while(status != WebsocketStatus::closed){
+        co_await transport->async_read(buffer, use_awaitable);
+        std::cout << beast::make_printable(buffer.data()) << std::endl;
+        string res = beast::buffers_to_string(buffer.data());
+        buffer.consume(buffer.size());
+        if(!res.empty()){
+            on_message(res);
         }
     }
+    cout << "Returning from wait and read, ws is closed" << endl;
 }
+
+Websocket::PingPong::PingPong(Websocket *ws): ws(ws), timer(ws->ctx), last_sent(0), last_received(0){}
+
+void Websocket::PingPong::on_received(const string& message){
+    last_received = ms_timestamp();
+    cout << "PingPong latency, milliseconds: " << (last_received - last_sent) << endl;
+    if(last_received - last_sent > 20){
+        ws->send_message("red");
+    }
+    timer.expires_from_now( boost::posix_time::seconds(5));
+    timer.async_wait([this](const boost::system::error_code&){
+        ws->send_message("__ping__");
+        last_sent = ms_timestamp();
+    });
+}
+
+awaitable<void> WebsocketManager::listener() {
+    cout << "WebsocketManager: listening new connections..." << endl;
+    auto _executor = co_await boost::asio::this_coro::executor;
+    tcp::acceptor _acceptor(_executor, {tcp::v4(), 8080});
+    for (;;) {
+        auto websocket = make_shared<Websocket>(co_await _acceptor.async_accept( use_awaitable), ctx);
+        co_await websocket->transport->async_accept(use_awaitable);
+        on_open(websocket);
+    }
+}
+
+void WebsocketManager::on_open(shared_ptr<Websocket> websocket) {
+    add_connection(websocket);
+    websocket->status = WebsocketStatus::connected;
+    websocket->subscribe(this);
+    websocket->send_message("__ping__");
+    websocket->pingpong->last_sent = ms_timestamp();
+    websocket->read();
+}
+
+void WebsocketManager::listen(){
+    co_spawn(ctx.get_executor(),
+             [self = shared_from_this()]{ return self->listener(); },
+             exception_handler_generator("WebsocketManager::listen")
+    );
+}
+
+WebsocketManager::WebsocketManager(asio::io_context &ctx, ssl::context &ssl_ctx, string port):ctx(ctx), ssl_ctx(ssl_ctx), port(std::move(port)) {}
+
+void WebsocketManager::subscribe(WebsocketEventSubscriber* candidate) {
+    auto it = find(subscribers.begin(), subscribers.end(), candidate);
+    if(it == subscribers.end()){
+        subscribers.push_back(candidate);
+    }
+}
+
+void WebsocketManager::unsubscribe(WebsocketEventSubscriber* candidate) {
+    auto it = find(subscribers.begin(), subscribers.end(), candidate);
+    if(it != subscribers.end()){
+        subscribers.erase(it);
+    }
+}
+
+void WebsocketManager::handle_event(WebsocketEvent& event) {
+    if(event.type == WebsocketEventType::close){
+        cout << "WSManager unsubscribe" << endl;
+        event.ws->unsubscribe(this);
+    }
+    for(auto subscriber: subscribers){
+        subscriber->handle_event(event);
+    }
+}
+
+

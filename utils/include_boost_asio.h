@@ -33,6 +33,12 @@
 #include <boost/certify/extensions.hpp>
 #include <boost/certify/https_verification.hpp>
 
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/lexical_cast.hpp>
+
+
 namespace http = boost::beast::http;
 namespace beast = boost::beast;
 namespace asio = boost::asio;
@@ -46,5 +52,6 @@ using boost::asio::co_spawn;
 using boost::asio::detached;
 using boost::asio::redirect_error;
 using boost::asio::use_awaitable;
+using namespace boost::uuids;
 
 #endif //G1TANK_INCLUDE_BOOST_ASIO_H

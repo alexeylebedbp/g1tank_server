@@ -7,15 +7,21 @@
 
 #include "iostream"
 #include <vector>
-#include "CarConnection.h"
-#include "PilotConnection.h"
+#include "Websocket.h"
+#include "include_boost_asio.h"
+#include "CarSession.h"
 
 using namespace std;
 
-class Server {
-    vector<CarConnection> car_connections{};
-    vector<PilotConnection>pilot_connections{};
+struct Server {
+    asio::io_context ctx;
+    ssl::context ssl_ctx{ssl::context::tls_server};
+    shared_ptr<WebsocketManager> car_connections;
+    shared_ptr<WebsocketManager> pilot_connections;
+    shared_ptr<CarSessionManager> car_sessions;
+    Server();
 
+    void run();
 };
 
 
