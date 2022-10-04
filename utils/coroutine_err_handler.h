@@ -1,0 +1,8 @@
+//
+// Created by alexeylebed on 10/3/22.
+//
+
+#ifndef G1TANK_COROUTINE_ERR_HANDLER_H
+#define G1TANK_COROUTINE_ERR_HANDLER_H
+
+#endif //G1TANK_COROUTINE_ERR_HANDLER_H

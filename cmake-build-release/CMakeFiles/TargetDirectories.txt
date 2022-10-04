@@ -1,0 +1,3 @@
+/home/alexeylebed/code/G1Tank/cmake-build-release/CMakeFiles/G1Tank.dir
+/home/alexeylebed/code/G1Tank/cmake-build-release/CMakeFiles/edit_cache.dir
+/home/alexeylebed/code/G1Tank/cmake-build-release/CMakeFiles/rebuild_cache.dir
