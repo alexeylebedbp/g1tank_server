@@ -6,6 +6,7 @@
 #define G1TANK_CONNECTIONMANAGER_H
 #include "iostream"
 #include <vector>
+#include "Event.h"
 using namespace std;
 
 template <typename T>
