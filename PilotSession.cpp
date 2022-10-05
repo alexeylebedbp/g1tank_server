@@ -26,7 +26,11 @@ void PilotSessionManager::init(){
     ws_connections->add_event_listener(shared_from_this());
 }
 
-void PilotSessionManager::on_event(const shared_ptr<Event> &event) {
+void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>> &event) {
+    //Auth and creation of a pilot session
+}
+
+void PilotSessionManager::on_event(const shared_ptr<Event<PilotSession>> &event) {
     //Auth and creation of a pilot session
 }
 

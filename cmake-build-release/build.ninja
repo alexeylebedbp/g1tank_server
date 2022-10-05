@@ -77,13 +77,6 @@ build CMakeFiles/G1Tank.dir/PilotSession.cpp.o: CXX_COMPILER__G1Tank_Release /ho
   OBJECT_DIR = CMakeFiles/G1Tank.dir
   OBJECT_FILE_DIR = CMakeFiles/G1Tank.dir
 
-build CMakeFiles/G1Tank.dir/utils/Event.cpp.o: CXX_COMPILER__G1Tank_Release /home/alexeylebed/code/G1Tank/utils/Event.cpp || cmake_object_order_depends_target_G1Tank
-  DEP_FILE = CMakeFiles/G1Tank.dir/utils/Event.cpp.o.d
-  FLAGS = -pthread -fcoroutines -O3 -DNDEBUG -std=gnu++2a
-  INCLUDES = -I/home/alexeylebed/code/G1Tank/utils -I/usr/local/boost_1_79_0/libs/certify/include -I/usr/local/opt/openssl@3/include -I/home/alexeylebed/code/G1Tank/. -I/home/alexeylebed/code/G1Tank/utils/network -I/home/alexeylebed/code/G1Tank/third_party/json/include
-  OBJECT_DIR = CMakeFiles/G1Tank.dir
-  OBJECT_FILE_DIR = CMakeFiles/G1Tank.dir/utils
-
 build CMakeFiles/G1Tank.dir/utils/network/Websocket.cpp.o: CXX_COMPILER__G1Tank_Release /home/alexeylebed/code/G1Tank/utils/network/Websocket.cpp || cmake_object_order_depends_target_G1Tank
   DEP_FILE = CMakeFiles/G1Tank.dir/utils/network/Websocket.cpp.o.d
   FLAGS = -pthread -fcoroutines -O3 -DNDEBUG -std=gnu++2a
@@ -99,7 +92,7 @@ build CMakeFiles/G1Tank.dir/utils/network/Websocket.cpp.o: CXX_COMPILER__G1Tank_
 #############################################
 # Link the executable G1Tank
 
-build G1Tank: CXX_EXECUTABLE_LINKER__G1Tank_Release CMakeFiles/G1Tank.dir/main.cpp.o CMakeFiles/G1Tank.dir/CarSession.cpp.o CMakeFiles/G1Tank.dir/Server.cpp.o CMakeFiles/G1Tank.dir/PilotSession.cpp.o CMakeFiles/G1Tank.dir/utils/Event.cpp.o CMakeFiles/G1Tank.dir/utils/network/Websocket.cpp.o
+build G1Tank: CXX_EXECUTABLE_LINKER__G1Tank_Release CMakeFiles/G1Tank.dir/main.cpp.o CMakeFiles/G1Tank.dir/CarSession.cpp.o CMakeFiles/G1Tank.dir/Server.cpp.o CMakeFiles/G1Tank.dir/PilotSession.cpp.o CMakeFiles/G1Tank.dir/utils/network/Websocket.cpp.o
   FLAGS = -pthread -fcoroutines -O3 -DNDEBUG
   LINK_LIBRARIES = -Wl,-rpath,/usr/local/opt/openssl@3/lib  -lcrypto  -lssl
   LINK_PATH = -L/usr/local/opt/openssl@3/lib

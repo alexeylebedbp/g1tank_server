@@ -15,14 +15,14 @@
 #include "nlohmann/json.hpp"
 #include "coroutine_err_handler.h"
 #include "Event.h"
+#include "Event.hpp"
 
 using namespace std;
 using ws_stream = beast::websocket::stream<tcp::socket&>;
 
 enum class WebsocketStatus {created, connected, closed};
 
-
-class Websocket: public enable_shared_from_this<Websocket>, public EventEmitter {
+class Websocket: public enable_shared_from_this<Websocket>, public EventEmitter<Websocket> {
 public:
     Websocket(tcp::socket socket, asio::io_context& ctx);
     WebsocketStatus status {WebsocketStatus::created};
@@ -60,8 +60,8 @@ private:
 class WebsocketManager:
         public enable_shared_from_this<WebsocketManager>,
         public ConnectionManager<Websocket>,
-        public EventListener,
-        public EventEmitter
+        public EventListener<Websocket>,
+        public EventEmitter<WebsocketManager>
 {
 public:
     WebsocketManager(asio::io_context& ctx, string  port);
@@ -71,7 +71,7 @@ private:
     awaitable<void> listener();
     const string port;
     void on_open(const shared_ptr<Websocket>& ws);
-    void on_event(const shared_ptr<Event>& event) override;
+    void on_event(const shared_ptr<Event<Websocket>>& event) override;
 };
 
 

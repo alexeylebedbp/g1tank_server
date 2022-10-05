@@ -16,7 +16,7 @@ void Websocket::on_message(const string &message) {
         pingpong->on_received(message);
         return;
     }
-    emit_event("message", message);
+    emit_event("message", message, (void*) this);
 }
 
 void Websocket::send_message(const string& message) {
@@ -73,6 +73,7 @@ void Websocket::PingPong::on_received(const string& message){
     });
 }
 
+
 awaitable<void> WebsocketManager::listener() {
     cout << "WebsocketManager: listening new connections..." << endl;
     auto _executor = co_await boost::asio::this_coro::executor;
@@ -103,12 +104,10 @@ void WebsocketManager::listen(){
 WebsocketManager::WebsocketManager(asio::io_context &ctx, string port):ctx(ctx), port(std::move(port)) {}
 
 
-void WebsocketManager::on_event(const shared_ptr<Event>& event) {
-    if(event->action == "close"){
+void WebsocketManager::on_event(const shared_ptr<Event<Websocket>>& event) {
+    if (event->action == "close") {
         cout << "WebsocketManager unsubscribe on WS CLOSE event" << endl;
-        ((Websocket* )event->emitter)->remove_event_listener(shared_from_this());
+        event->emitter->remove_event_listener(shared_from_this());
     }
-    emit_event(event->action, event->message, event->emitter);
+    emit_event(event->action, event->message, event->data);
 }
-
-

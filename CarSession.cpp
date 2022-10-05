@@ -18,10 +18,10 @@ void CarSessionManager::init() {
     ws_connections->add_event_listener(shared_from_this());
 }
 
-void CarSessionManager::on_event(const shared_ptr<Event>& event) {
+void CarSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
     if(event->action == "close"){
         cout << "CarSessionManager unsubscribe" << endl;
-       //((WebsocketManager*)event->emitter)->remove_event_listener(shared_from_this());
+        event->emitter->remove_event_listener(shared_from_this());
         return;
     }
     auto j = nlohmann::json::parse(event->message);
@@ -38,13 +38,17 @@ void CarSessionManager::on_event(const shared_ptr<Event>& event) {
         }
         if(it == connections.end()){
             cout << "Creating a new CarSession" <<  endl;
-            auto ws = shared_ptr<Websocket>((Websocket *)event->emitter);
+            auto ws = shared_ptr<Websocket>((Websocket *)event->data);
             auto session = make_shared<CarSession>(str_to_uuid(j["car_id"]), ws, ctx);
             session->add_event_listener(shared_from_this());
             ws->add_event_listener(session);
             connections.push_back(session);
         }
     }
+}
+
+void CarSessionManager::on_event(const shared_ptr<Event<CarSession>> &event) {
+
 }
 
 

@@ -15,8 +15,8 @@ class PilotSessionManager;
 
 class PilotSession:
         public enable_shared_from_this<PilotSession>,
-        public EventListener,
-        public EventEmitter
+        public EventListener<Websocket>,
+        public EventEmitter<PilotSession>
 {
 public:
     uuid session_id;
@@ -33,12 +33,14 @@ public:
 class PilotSessionManager:
         public enable_shared_from_this<PilotSessionManager>,
         public ConnectionManager<PilotSession>,
-        public EventEmitter,
-        public EventListener
+        public EventEmitter<PilotSessionManager>,
+        public EventListener<WebsocketManager>,
+        public EventListener<PilotSession>
 {
     shared_ptr<WebsocketManager>ws_connections;
     asio::io_context& ctx;
-    void on_event(const shared_ptr<Event>& event) override;
+    void on_event(const shared_ptr<Event<WebsocketManager>>& event) override;
+    void on_event(const shared_ptr<Event<PilotSession>>& event) override;
 public:
     explicit PilotSessionManager(asio::io_context&);
     bool get_car_control(uuid car_id);
