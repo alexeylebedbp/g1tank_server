@@ -14,6 +14,7 @@ class PilotSessionManager;
 class CarSession:
         public enable_shared_from_this<CarSession>,
         public EventListener<Websocket>,
+        public EventListener<PilotSession>,
         public EventEmitter<CarSession>
 {
 public:
@@ -34,12 +35,14 @@ class CarSessionManager:
         public EventListener<CarSession>
 {
     asio::io_context& ctx;
+    shared_ptr<PilotSessionManager> pilot_session_manager{nullptr};
     void on_event(const shared_ptr<Event<WebsocketManager>>& event) override;
     void on_event(const shared_ptr<Event<CarSession>>& event) override;
 public:
     explicit CarSessionManager(asio::io_context&);
     shared_ptr<WebsocketManager>ws_connections;
-    void init();
+    void init(const shared_ptr<PilotSessionManager>& );
+    CarSession* handle_car_control_request(uuid car_id, PilotSession* candidate);
 };
 
 

@@ -20,7 +20,13 @@ void Websocket::on_message(const string &message) {
 }
 
 void Websocket::send_message(const string& message) {
-    transport->write(asio::buffer(message));
+    try {
+        transport->write(asio::buffer(message));
+    } catch (std::exception& e){
+        std::cerr << "Websocket::send_message() " << e.what() << endl;
+        this->status = WebsocketStatus::closed;
+        this->emit_event("close");
+    }
 }
 
 awaitable<void> Websocket::send(const string &message) {
@@ -35,12 +41,11 @@ void Websocket::read() {
                  try {
                      if (e) {std::rethrow_exception(e);}
                  } catch(const std::exception& e) {
-                     cout << typeid(e).name() << endl;
                      if(string(e.what()) == "End of file [asio.misc:2]"){
                          self->status = WebsocketStatus::closed;
                          self->emit_event("close");
                      }
-                     std::cout << "Coro exception " << "Websocket::read() " << e.what() << endl;
+                     std::cerr << "Coro exception " << "Websocket::read() " << e.what() << endl;
                  }
              }
     );
@@ -75,13 +80,18 @@ void Websocket::PingPong::on_received(const string& message){
 
 
 awaitable<void> WebsocketManager::listener() {
-    cout << "WebsocketManager: listening new connections..." << endl;
+    cout << "WebsocketManager: listening new connections on PORT: " << port << endl;
     auto _executor = co_await boost::asio::this_coro::executor;
-    tcp::acceptor _acceptor(_executor, {tcp::v4(), 8080});
+    tcp::acceptor _acceptor(_executor, {tcp::v4(), asio::ip::port_type(port)});
     for (;;) {
         auto websocket = make_shared<Websocket>(co_await _acceptor.async_accept( use_awaitable), ctx);
-        co_await websocket->transport->async_accept(use_awaitable);
-        on_open(websocket);
+        try {
+            co_await websocket->transport->async_accept(use_awaitable);
+            on_open(websocket);
+        } catch (std::exception& e){
+            cerr << "WebsocketManager::listener() " << e.what() << endl;
+        }
+
     }
 }
 
@@ -101,7 +111,7 @@ void WebsocketManager::listen(){
     );
 }
 
-WebsocketManager::WebsocketManager(asio::io_context &ctx, string port):ctx(ctx), port(std::move(port)) {}
+WebsocketManager::WebsocketManager(asio::io_context &ctx, int port):ctx(ctx), port(std::move(port)) {}
 
 
 void WebsocketManager::on_event(const shared_ptr<Event<Websocket>>& event) {
@@ -109,5 +119,5 @@ void WebsocketManager::on_event(const shared_ptr<Event<Websocket>>& event) {
         cout << "WebsocketManager unsubscribe on WS CLOSE event" << endl;
         event->emitter->remove_event_listener(shared_from_this());
     }
-    emit_event(event->action, event->message, event->data);
+    emit_event(event->action, event->message, (void*)event->emitter);
 }

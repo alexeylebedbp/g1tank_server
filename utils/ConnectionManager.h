@@ -15,17 +15,22 @@ class ConnectionManager {
 protected:
     vector<ptr> connections;
 public:
-    virtual void add_connection(ptr connection){
+     void add_connection(const ptr& connection){
         connections.push_back(connection);
     };
-    virtual void remove_connection(ptr connection){
+
+    void remove_connection(const ptr& connection){
+        auto to_delete = connections.end();
         for(auto it = connections.begin(); it != connections.end(); it++){
             if(*it == connection){
-                connections.erase(it);
+                to_delete = it;
+                break;
             }
         }
+        if(to_delete != connections.end()) connections.erase(to_delete);
     };
 };
+
 
 
 #endif //G1TANK_CONNECTIONMANAGER_H

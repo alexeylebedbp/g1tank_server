@@ -15,7 +15,7 @@
 #include "nlohmann/json.hpp"
 #include "coroutine_err_handler.h"
 #include "Event.h"
-#include "Event.hpp"
+#include "uuid.h"
 
 using namespace std;
 using ws_stream = beast::websocket::stream<tcp::socket&>;
@@ -34,8 +34,8 @@ public:
 
 private:
     struct PingPong {
-        int last_sent;
-        int last_received;
+        int last_sent{0};
+        int last_received{0};
         void on_received(const string& message);
         Websocket* ws;
         explicit PingPong(Websocket*);
@@ -64,12 +64,12 @@ class WebsocketManager:
         public EventEmitter<WebsocketManager>
 {
 public:
-    WebsocketManager(asio::io_context& ctx, string  port);
+    WebsocketManager(asio::io_context& ctx, int  port);
     void listen();
 private:
     asio::io_context& ctx;
     awaitable<void> listener();
-    const string port;
+    const int port;
     void on_open(const shared_ptr<Websocket>& ws);
     void on_event(const shared_ptr<Event<Websocket>>& event) override;
 };

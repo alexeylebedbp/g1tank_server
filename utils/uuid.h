@@ -8,7 +8,7 @@
 
 using namespace std;
 
-uuid str_to_uuid(const string& str){
+inline uuid str_to_uuid(const string& str){
     return boost::lexical_cast<uuid>(str);
 }
 

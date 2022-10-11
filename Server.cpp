@@ -11,8 +11,9 @@ Server::Server()
 void Server::run() {
     boost::asio::signal_set signals(ctx, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto){ctx.stop();});
-    car_sessions->init();
-    pilot_sessions->init();
+    car_sessions->init(pilot_sessions);
+    pilot_sessions->init(car_sessions);
     car_sessions->ws_connections->listen();
+    pilot_sessions->ws_connections->listen();
     ctx.run();
 };
