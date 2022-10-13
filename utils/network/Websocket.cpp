@@ -20,12 +20,14 @@ void Websocket::on_message(const string &message) {
 }
 
 void Websocket::send_message(const string& message) {
-    try {
-        transport->write(asio::buffer(message));
-    } catch (std::exception& e){
-        std::cerr << "Websocket::send_message() " << e.what() << endl;
-        this->status = WebsocketStatus::closed;
-        this->emit_event("close");
+    if(status == WebsocketStatus::connected){
+        try {
+            transport->write(asio::buffer(message));
+        } catch (std::exception& e){
+            std::cerr << "Websocket::send_message() " << e.what() << endl;
+            this->status = WebsocketStatus::closed;
+            this->emit_event("close");
+        }
     }
 }
 
@@ -41,10 +43,8 @@ void Websocket::read() {
                  try {
                      if (e) {std::rethrow_exception(e);}
                  } catch(const std::exception& e) {
-                     if(string(e.what()) == "End of file [asio.misc:2]"){
-                         self->status = WebsocketStatus::closed;
-                         self->emit_event("close");
-                     }
+                     self->status = WebsocketStatus::closed;
+                     self->emit_event("close");
                      std::cerr << "Coro exception " << "Websocket::read() " << e.what() << endl;
                  }
              }
@@ -52,7 +52,7 @@ void Websocket::read() {
 }
 
 awaitable<void> Websocket::wait_and_read() {
-    while(status != WebsocketStatus::closed){
+    while(status == WebsocketStatus::connected){
         co_await transport->async_read(buffer, use_awaitable);
         std::cout << beast::make_printable(buffer.data()) << std::endl;
         string res = beast::buffers_to_string(buffer.data());

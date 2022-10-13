@@ -19,17 +19,23 @@ class PilotSession:
         public EventListener<CarSession>,
         public EventEmitter<PilotSession>
 {
+    CarSession* car{nullptr};
 public:
     uuid session_id;
     uuid pilot_id;
     shared_ptr<Websocket> ws;
     asio::io_context &ctx;
-    CarSession* car{nullptr};
     shared_ptr<PilotSessionManager> manager;
 
     PilotSession(uuid pilot_id, Websocket* ws, asio::io_context &ctx, const shared_ptr<PilotSessionManager>& manager);
     CarSession* get_car_control(const uuid& car_id);
     void init();
+
+    CarSession* get_car();
+    void add_car(CarSession*);
+    void remove_car(CarSession*);
+
+    void on_event(const shared_ptr<Event<CarSession>>&) override;
 };
 
 class PilotSessionManager:

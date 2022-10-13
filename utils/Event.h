@@ -53,7 +53,6 @@ public:
         for(const auto& listener: listeners){
             listener->on_event(event);
         }
-        cleanup();
     };
 
     virtual void emit_event(const string& action, const string& message){
@@ -61,10 +60,10 @@ public:
         for(const auto& listener: listeners){
             listener->on_event(event);
         }
-        cleanup();
     }
     virtual void emit_event(const string& action){
         auto event = make_shared<Event<T>>(action, (T*)this);
+        cout << "listeners " << listeners.size() << endl;
         for(const auto& listener: listeners){
             listener->on_event(event);
         }

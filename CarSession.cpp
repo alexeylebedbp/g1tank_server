@@ -21,8 +21,16 @@ void CarSessionManager::init(const shared_ptr<PilotSessionManager>& pilot_sessio
 
 void CarSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
     if(event->action == "close"){
-        cout << "CarSessionManager unsubscribe" << endl;
-        event->emitter->remove_event_listener(shared_from_this());
+        cout << "CarSessionManager WS close" << endl;
+        auto ws = (Websocket*)event->data;
+        shared_ptr<CarSession> session  {nullptr};
+        for(const auto& connection: connections){
+            if(connection->ws.get() == ws){
+                session = connection;
+            }
+        }
+        session->emit_event("close");
+        remove_connection(session);
         return;
     }
     auto j = nlohmann::json::parse(event->message);

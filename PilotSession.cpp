@@ -22,6 +22,34 @@ CarSession* PilotSession::get_car_control(const uuid& car_id) {
     }
 }
 
+void PilotSession::on_event(const shared_ptr<Event<CarSession>>& event){
+    if(event->action == "close"){
+        cout << "PilotSession: CarSession is closed" << endl;
+        nlohmann::json j;
+        j["action"] = "car_disconnected";
+        j["car_id"] = car->car_id;
+        ws->send_message(j.dump());
+        remove_car(event->emitter);
+    }
+}
+
+void PilotSession::init() {
+    ws->add_event_listener(shared_from_this());
+}
+
+void PilotSession::add_car(CarSession* car_) {
+    this->car = car_;
+    car_->add_event_listener(shared_from_this());
+}
+
+void PilotSession::remove_car(CarSession* car_) {
+    this->car = nullptr;
+    //car_->remove_event_listener(shared_from_this());
+}
+
+CarSession* PilotSession::get_car() {
+    return car;
+}
 
 PilotSessionManager::PilotSessionManager(asio::io_context& ctx)
         :ws_connections(make_shared<WebsocketManager>(ctx, 8081)), ctx(ctx){}
@@ -75,16 +103,16 @@ void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& ev
                 if(j["action"] == "get_car_control"){
                     try {
                         uuid car_id = str_to_uuid(j["car_id"]);
-                        CarSession* car = get_car_control(car_id, connection.get());
-                        if(car == nullptr){
+                        CarSession* _car = get_car_control(car_id, connection.get());
+                        if(_car == nullptr){
                             nlohmann::json res;
                             res["action"] = "failed_to_obtain_car_control";
                             res["car_id"] = j["car_id"];
                             connection->ws->send_message(res.dump());
                             return;
                         }
-                        connection->car = car;
-                        cout << "Pilot "<< connection->pilot_id << " got control on the car " <<  connection->car->car_id << endl;
+                        connection->add_car(_car);
+                        cout << "Pilot "<< connection->pilot_id << " got control on the car " <<  connection->get_car()->car_id << endl;
                         nlohmann::json res;
                         res["action"] = "car_control_obtained";
                         res["car_id"] = j["car_id"];
@@ -93,22 +121,17 @@ void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& ev
                         cerr << "Couldn't get car control" << endl;
                     }
                 } else if(j["action"] == "move"){
-                    if(connection->car == nullptr){
+                    if(connection->get_car() == nullptr){
                         cerr << "Unable to find a car" << endl;
                     } else {
                         cout << "Redirecting move command to a Car" << endl;
-                        connection->car->ws->send_message(j.dump());
+                        connection->get_car()->ws->send_message(j.dump());
                     }
                 }
             }
         }
     }
 }
-
-void PilotSession::init() {
-    ws->add_event_listener(shared_from_this());
-}
-
 
 void PilotSessionManager::on_event(const shared_ptr<Event<PilotSession>> &event) {
     //Auth and creation of a pilot session
