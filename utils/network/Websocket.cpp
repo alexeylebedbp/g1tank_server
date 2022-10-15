@@ -63,18 +63,32 @@ awaitable<void> Websocket::wait_and_read() {
     }
 }
 
-Websocket::PingPong::PingPong(Websocket *ws): ws(ws), timer(ws->ctx), last_sent(0), last_received(0){}
+Websocket::PingPong::PingPong(Websocket *ws)
+    :ws(ws), latency_timer(ws->ctx), timeout(ws->ctx), last_sent(0), last_received(0){}
 
 void Websocket::PingPong::on_received(const string& message){
+    timeout.cancel();
     last_received = ms_timestamp();
     cout << "PingPong latency, milliseconds: " << (last_received - last_sent) << endl;
+
     if(last_received - last_sent > 20){
         ws->send_message("red");
     }
-    timer.expires_from_now( boost::posix_time::seconds(5));
-    timer.async_wait([this](const boost::system::error_code&){
+
+    latency_timer.expires_from_now( boost::posix_time::seconds(ping_pong_timeout));
+    latency_timer.async_wait([this](const boost::system::error_code&){
         ws->send_message("__ping__");
         last_sent = ms_timestamp();
+    });
+
+    timeout.expires_from_now(boost::posix_time::seconds(disconnect_timeout));
+    timeout.async_wait([this](const boost::system::error_code& e){
+        if(e.value() == 0){
+            cout <<"No response from WS client, disconnecting..." << endl;
+            ws->status = WebsocketStatus::closed;
+            ws->socket.close();
+            ws->emit_event("close");
+        }
     });
 }
 
@@ -83,7 +97,7 @@ awaitable<void> WebsocketManager::listener() {
     cout << "WebsocketManager: listening new connections on PORT: " << port << endl;
     auto _executor = co_await boost::asio::this_coro::executor;
     tcp::acceptor _acceptor(_executor, {tcp::v4(), asio::ip::port_type(port)});
-    for (;;) {
+    while(is_running) {
         auto websocket = make_shared<Websocket>(co_await _acceptor.async_accept( use_awaitable), ctx);
         try {
             co_await websocket->transport->async_accept(use_awaitable);
@@ -91,7 +105,6 @@ awaitable<void> WebsocketManager::listener() {
         } catch (std::exception& e){
             cerr << "WebsocketManager::listener() " << e.what() << endl;
         }
-
     }
 }
 

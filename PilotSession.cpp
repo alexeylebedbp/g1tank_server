@@ -52,7 +52,8 @@ CarSession* PilotSession::get_car() {
 }
 
 PilotSessionManager::PilotSessionManager(asio::io_context& ctx)
-        :ws_connections(make_shared<WebsocketManager>(ctx, 8081)), ctx(ctx){}
+        :ws_connections(make_shared<WebsocketManager>(ctx, 8081)),
+         ctx(ctx){}
 
 void PilotSessionManager::init(const shared_ptr<CarSessionManager>& car_manager){
     ws_connections->add_event_listener(shared_from_this());
@@ -127,16 +128,17 @@ void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& ev
                         cout << "Redirecting move command to a Car" << endl;
                         connection->get_car()->ws->send_message(j.dump());
                     }
+                } else if(j["action"] == "byebye"){
+                    on_stop_signal();
                 }
             }
         }
     }
 }
 
-void PilotSessionManager::on_event(const shared_ptr<Event<PilotSession>> &event) {
-    //Auth and creation of a pilot session
-}
 
 CarSession* PilotSessionManager::get_car_control(uuid car_id, PilotSession* pilot) {
     return car_session_manager->handle_car_control_request(car_id, pilot);
 }
+
+void PilotSessionManager::on_event(const shared_ptr<Event<PilotSession>> &event) {}

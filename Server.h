@@ -20,6 +20,7 @@ struct Server {
     Server();
 
     void run();
+    void stop();
 };
 
 

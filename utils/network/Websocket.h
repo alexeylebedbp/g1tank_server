@@ -36,10 +36,13 @@ private:
     struct PingPong {
         int last_sent{0};
         int last_received{0};
+        int disconnect_timeout {20};
+        int ping_pong_timeout {5};
         void on_received(const string& message);
         Websocket* ws;
         explicit PingPong(Websocket*);
-        boost::asio::deadline_timer timer;
+        boost::asio::deadline_timer latency_timer;
+        boost::asio::deadline_timer timeout;
     };
 
     PingPong* pingpong {nullptr};
@@ -66,6 +69,7 @@ class WebsocketManager:
 public:
     WebsocketManager(asio::io_context& ctx, int  port);
     void listen();
+    bool is_running {true};
 private:
     asio::io_context& ctx;
     awaitable<void> listener();
