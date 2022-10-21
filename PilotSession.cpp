@@ -57,7 +57,7 @@ PilotSessionManager::PilotSessionManager(asio::io_context& ctx)
 
 void PilotSessionManager::init(const shared_ptr<CarSessionManager>& car_manager){
     ws_connections->add_event_listener(shared_from_this());
-    this->car_session_manager = car_manager;
+    this->car_session_manager = car_manager.get();
 }
 
 void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
@@ -103,6 +103,7 @@ void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& ev
             if(connection->pilot_id == str_to_uuid(j["pilot_id"])){
                 if(j["action"] == "get_car_control"){
                     try {
+                        cout << 106 << endl;
                         uuid car_id = str_to_uuid(j["car_id"]);
                         CarSession* _car = get_car_control(car_id, connection.get());
                         if(_car == nullptr){
@@ -130,6 +131,20 @@ void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& ev
                     }
                 } else if(j["action"] == "byebye"){
                     on_stop_signal();
+                } else if(j["action"] == "webrtc_answer"){
+                    if(connection->get_car() == nullptr){
+                        cerr << "Unable to find a car" << endl;
+                    } else {
+                        cout << "Redirecting webrtc_answer command to a Car" << endl;
+                        connection->get_car()->ws->send_message(j.dump());
+                    }
+                } else if(j["action"] == "offer_request"){
+                    if(connection->get_car() == nullptr){
+                        cerr << "Unable to find a car" << endl;
+                    } else {
+                        cout << "Redirecting webrtc_answer command to a Car" << endl;
+                        connection->get_car()->ws->send_message(j.dump());
+                    }
                 }
             }
         }

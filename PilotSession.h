@@ -48,14 +48,14 @@ class PilotSessionManager:
         public EventListener<PilotSession>
 
 {
-    shared_ptr<CarSessionManager> car_session_manager{nullptr};
+    CarSessionManager* car_session_manager{nullptr};
     asio::io_context& ctx;
 
     void on_event(const shared_ptr<Event<WebsocketManager>>& event) override;
     void on_event(const shared_ptr<Event<PilotSession>>& event) override;
     void on_stop_signal() const;
 public:
-    PilotSessionManager(asio::io_context&);
+    explicit PilotSessionManager(asio::io_context&);
     shared_ptr<WebsocketManager>ws_connections;
     Server* server {nullptr};
     CarSession* get_car_control(uuid car_id, PilotSession* pilot);

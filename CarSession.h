@@ -35,7 +35,7 @@ class CarSessionManager:
         public EventListener<CarSession>
 {
     asio::io_context& ctx;
-    shared_ptr<PilotSessionManager> pilot_session_manager{nullptr};
+    PilotSessionManager* pilot_session_manager{nullptr};
     void on_event(const shared_ptr<Event<WebsocketManager>>& event) override;
     void on_event(const shared_ptr<Event<CarSession>>& event) override;
 public:

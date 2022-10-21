@@ -14,9 +14,9 @@ CarSession::CarSession(uuid car_id, const shared_ptr<Websocket>& ws,  asio::io_c
 CarSessionManager::CarSessionManager(asio::io_context& ctx)
     :ws_connections(make_shared<WebsocketManager>(ctx, 8080)), ctx(ctx){}
 
-void CarSessionManager::init(const shared_ptr<PilotSessionManager>& pilot_session_manager) {
+void CarSessionManager::init(const shared_ptr<PilotSessionManager>& pilot_session_manager_) {
     ws_connections->add_event_listener(shared_from_this());
-    this->pilot_session_manager = pilot_session_manager;
+    this->pilot_session_manager = pilot_session_manager_.get();
 }
 
 void CarSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
@@ -34,7 +34,8 @@ void CarSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& even
         return;
     }
     auto j = nlohmann::json::parse(event->message);
-    if(!j["action"].empty() && j["action"] == "auth_session" && !j["car_id"].empty()){
+    if(j["action"].empty() || j["car_id"].empty()) return;
+    if(j["action"] == "auth_session"){
         cout << "Auth session message is received, car_id: " << j["car_id"] << endl;
         auto it = connections.begin();
         while(it != connections.end()){
@@ -49,9 +50,25 @@ void CarSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& even
             cout << "Creating a new CarSession" <<  endl;
             auto ws = shared_ptr<Websocket>((Websocket *)event->data);
             auto session = make_shared<CarSession>(str_to_uuid(j["car_id"]), ws, ctx);
+            nlohmann::json j;
+            j["action"] = "auth_accept";
+            session->ws->send_message(j.dump());
             session->add_event_listener(shared_from_this());
             ws->add_event_listener(session);
             connections.push_back(session);
+        }
+    } else {
+        if(j["action"] == "webrtc_offer"){
+            for(const auto& connection: connections){
+                if(connection->car_id == str_to_uuid(j["car_id"])){
+                    if(connection->pilot == nullptr){
+                        cerr << "Unable to find a pilot" << endl;
+                    } else {
+                        cout << "Redirecting webrtc_offer command to a Car" << endl;
+                        connection->pilot->ws->send_message(j.dump());
+                    }
+                }
+            }
         }
     }
 }
