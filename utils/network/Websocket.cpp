@@ -71,8 +71,8 @@ void Websocket::PingPong::on_received(const string& message){
     last_received = ms_timestamp();
     cout << "PingPong latency, milliseconds: " << (last_received - last_sent) << endl;
 
-    if(last_received - last_sent > 20){
-        ws->send_message("red");
+    if(last_received - last_sent > 200){
+        ws->send_message("poor_network_detected");
     }
 
     latency_timer.expires_from_now( boost::posix_time::seconds(ping_pong_timeout));
