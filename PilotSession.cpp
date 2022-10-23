@@ -132,16 +132,22 @@ void PilotSessionManager::init(const shared_ptr<CarSessionManager>& car_manager)
 
 void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
     cout << "PilotSessionManager: " <<  event->message << endl;
-    auto j = nlohmann::json::parse(event->message);
-    if(j["pilot_id"].empty() || j["action"].empty()) return;
-    if(ws_events.find(j["action"]) == ws_events.end()) return;
-
     if(event->action == "close"){
-        on_close(event, j);
-    } else if(j["action"] == "auth_session"){
-        on_auth_session(event, j);
-    } else if(j["action"] == "byebye"){
-        on_stop_signal();
+        on_close(event);
+        return;
+    }
+    try {
+        auto j = nlohmann::json::parse(event->message);
+        if(j["pilot_id"].empty() || j["action"].empty()) return;
+        if(ws_events.find(j["action"]) == ws_events.end()) return;
+
+        if(j["action"] == "auth_session"){
+            on_auth_session(event, j);
+        } else if(j["action"] == "byebye"){
+            on_stop_signal();
+        }
+    } catch (std::exception& e){
+        cerr << "PilotSessionManager WebsocketManager event handling error" << e.what()<< endl;
     }
 }
 
@@ -169,7 +175,7 @@ void PilotSessionManager::on_auth_session(const shared_ptr<Event<WebsocketManage
     }
 }
 
-void PilotSessionManager::on_close(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j) {
+void PilotSessionManager::on_close(const shared_ptr<Event<WebsocketManager>>& event) {
     cout << "PilotSessionManager WS close" << endl;
     auto ws = (Websocket*)event->data;
     shared_ptr<PilotSession> session  {nullptr};

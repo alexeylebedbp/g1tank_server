@@ -76,7 +76,7 @@ class PilotSessionManager:
     ///WebsocketManager events
     const std::set<string> ws_events {"auth_session", "close"};
     void on_auth_session(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j);
-    void on_close(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j);
+    void on_close(const shared_ptr<Event<WebsocketManager>>& event);
 
 
 public:
