@@ -20,6 +20,20 @@ class PilotSession:
         public EventEmitter<PilotSession>
 {
     CarSession* car{nullptr};
+
+    ///Websocket events
+    const std::set<string> ws_events {"get_car_control","move", "offer_request", "webrtc_answer"};
+    void on_get_car_control(const shared_ptr<Event<Websocket>>& event, nlohmann::json& j);
+    void on_move(const shared_ptr<Event<Websocket>>& event, nlohmann::json& j);
+    void on_offer_request(const shared_ptr<Event<Websocket>>& event, nlohmann::json& j);
+    void on_webrtc_answer(const shared_ptr<Event<Websocket>>& event, nlohmann::json& j);
+    void redirect_message_to_car(nlohmann::json&);
+
+    ///Car events
+    const std::set<string> car_events{"close"};
+    void on_car_disconnected(const shared_ptr<Event<CarSession>>& event, nlohmann::json& j);
+
+
 public:
     uuid session_id;
     uuid pilot_id;
@@ -31,11 +45,11 @@ public:
     CarSession* get_car_control(const uuid& car_id);
     void init();
 
-    CarSession* get_car();
     void add_car(CarSession*);
     void remove_car(CarSession*);
 
     void on_event(const shared_ptr<Event<CarSession>>&) override;
+    void on_event(const shared_ptr<Event<Websocket>>&) override;
 };
 
 class Server;
@@ -50,10 +64,21 @@ class PilotSessionManager:
 {
     CarSessionManager* car_session_manager{nullptr};
     asio::io_context& ctx;
+    std::set<string> ws_event_types {"close", "auth_session"};
 
     void on_event(const shared_ptr<Event<WebsocketManager>>& event) override;
     void on_event(const shared_ptr<Event<PilotSession>>& event) override;
     void on_stop_signal() const;
+
+    ///PilotSessionEvents
+    const std::set<string> pilot_events{"byebye"};
+
+    ///WebsocketManager events
+    const std::set<string> ws_events {"auth_session", "close"};
+    void on_auth_session(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j);
+    void on_close(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j);
+
+
 public:
     explicit PilotSessionManager(asio::io_context&);
     shared_ptr<WebsocketManager>ws_connections;

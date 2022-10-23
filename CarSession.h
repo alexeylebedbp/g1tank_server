@@ -17,6 +17,12 @@ class CarSession:
         public EventListener<PilotSession>,
         public EventEmitter<CarSession>
 {
+    ///Websocket events
+    const std::set<string> ws_events {"webrtc_offer"};
+    void on_webrtc_offer(const shared_ptr<Event<Websocket>>& event, nlohmann::json& j);
+
+    void redirect_message_to_pilot(const nlohmann::json& j) const;
+
 public:
     uuid session_id;
     uuid car_id;
@@ -24,6 +30,7 @@ public:
     asio::io_context& ctx;
     CarSession(uuid car_id, const shared_ptr<Websocket>& ws,  asio::io_context& ctx);
     PilotSession* pilot {nullptr};
+    void on_event(const shared_ptr<Event<Websocket>>&) override;
 };
 
 
@@ -38,6 +45,12 @@ class CarSessionManager:
     PilotSessionManager* pilot_session_manager{nullptr};
     void on_event(const shared_ptr<Event<WebsocketManager>>& event) override;
     void on_event(const shared_ptr<Event<CarSession>>& event) override;
+
+    ///WebsocketManager events
+    const std::set<string> ws_events {"auth_session", "close"};
+    void on_auth_session(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j);
+    void on_close(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j);
+
 public:
     explicit CarSessionManager(asio::io_context&);
     shared_ptr<WebsocketManager>ws_connections;
