@@ -6,6 +6,7 @@
 #define G1TANK_EVENT_H
 #include "iostream"
 #include "include_boost_asio.h"
+#include <utility>
 #include <vector>
 #include <stack>
 
@@ -30,6 +31,7 @@ struct Event {
 
 template <typename  T>
 class EventListener {
+    set<string>event_types;
 public:
     virtual void on_event(const shared_ptr<Event<T>>& event){};
 };
