@@ -46,19 +46,23 @@ void CarSessionManager::init(const shared_ptr<PilotSessionManager>& pilot_sessio
 
 
 void CarSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
+
+    if(event->action == "close"){
+        on_close(event);
+        return;
+    }
+
     cout << "CarSessionManager WS Event: " <<  event->message << endl;
     auto j = nlohmann::json::parse(event->message);
     if(j["car_id"].empty() || j["action"].empty()) return;
     if(ws_events.find(j["action"]) == ws_events.end()) return;
 
-    if(event->action == "close"){
-        on_close(event, j);
-    } else if(j["action"] == "auth_session"){
+    if(j["action"] == "auth_session"){
         on_auth_session(event, j);
     }
 }
 
-void CarSessionManager::on_close(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j) {
+void CarSessionManager::on_close(const shared_ptr<Event<WebsocketManager>>& event) {
     cout << "CarSessionManager WS close" << endl;
     auto ws = (Websocket*)event->data;
     shared_ptr<CarSession> session  {nullptr};
