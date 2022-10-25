@@ -8,6 +8,7 @@
 #include "Websocket.h"
 #include "include_boost_asio.h"
 #include "coroutine_err_handler.h"
+#include "constants.h"
 
 class CarSession;
 class CarSessionManager;

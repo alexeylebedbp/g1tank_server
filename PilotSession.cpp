@@ -18,7 +18,7 @@ CarSession* PilotSession::get_car_control(const uuid& car_id) {
         cerr << "PilotSession::get_car_control already controls a car" << endl;
         return nullptr;
     } else {
-        manager->get_car_control(car_id, this);
+        return manager->get_car_control(car_id, this);
     }
 }
 
@@ -32,19 +32,23 @@ void PilotSession::redirect_message_to_car(nlohmann::json& j) {
 }
 
 void PilotSession::on_event(const shared_ptr<Event<Websocket>>& event) {
-    cout << "PilotSession WS event: " << event->message << endl;
+    cout << "PilotSession WS event: " << event->action << " " << event->message << endl;
+
+    if(event->action == CLOSE || event->message.empty()){
+        return;
+    }
 
     auto j = nlohmann::json::parse(event->message);
-    if (j["pilot_id"].empty() || j["action"].empty()) return;
-    if(ws_events.find(j["action"]) == ws_events.end()) return;
+    if (j[PILOT_ID].empty() || j[ACTION].empty()) return;
+    if(ws_events.find(j[ACTION]) == ws_events.end()) return;
 
-    if (j["action"] == "get_car_control") {
+    if (j[ACTION] == GET_CAR_CONTROL) {
         on_get_car_control(event, j);
-    } else if(j["action"] == "move"){
+    } else if(j[ACTION] == MOVE){
         on_move(event, j);
-    } else if(j["action"] == "offer_request"){
+    } else if(j[ACTION] == OFFER_REQUEST){
         on_offer_request(event, j);
-    } else if(j["action"] == "webrtc_answer"){
+    } else if(j[ACTION] == WEBRTC_ANSWER){
         on_webrtc_answer(event, j);
     }
 }
@@ -53,7 +57,7 @@ void PilotSession::on_event(const shared_ptr<Event<CarSession>>& event){
     cout << "PilotSession Car event: " << event->message << endl;
 
     auto j = nlohmann::json::parse(event->message);
-    if (j["pilot_id"].empty() || j["action"].empty()) return;
+    if (j[PILOT_ID].empty() || j[ACTION].empty()) return;
     if(car_events.find(j["action"]) == ws_events.end()) return;
 
     if(event->action == "close"){
@@ -63,20 +67,20 @@ void PilotSession::on_event(const shared_ptr<Event<CarSession>>& event){
 
 void PilotSession::on_get_car_control(const shared_ptr<Event<Websocket>>& event, nlohmann::json& j){
     try {
-        uuid car_id = str_to_uuid(j["car_id"]);
+        uuid car_id = str_to_uuid(j[CAR_ID]);
         CarSession* _car = get_car_control(car_id);
         if(_car == nullptr){
             nlohmann::json res;
-            res["action"] = "failed_to_obtain_car_control";
-            res["car_id"] = j["car_id"];
+            res[ACTION] = FAILED_TO_OBTAIN_CAR_CONTROL;
+            res[CAR_ID] = j[CAR_ID];
             this->ws->send_message(res.dump());
             return;
         }
         this->add_car(_car);
         cout << "Pilot "<< this->pilot_id << " got control on the car " <<  this->car->car_id << endl;
         nlohmann::json res;
-        res["action"] = "car_control_obtained";
-        res["car_id"] = j["car_id"];
+        res[ACTION] = CAR_CONTROL_OBTAINED;
+        res[CAR_ID] = j[CAR_ID];
         this->ws->send_message(res.dump());
     } catch(std::exception& e){
         cerr << "Couldn't get car control" << endl;
@@ -98,8 +102,8 @@ void PilotSession::on_webrtc_answer(const shared_ptr<Event<Websocket>> &event, n
 void PilotSession::on_car_disconnected(const shared_ptr<Event<CarSession>> &event, nlohmann::json &j) {
     cout << "PilotSession: CarSession is closed" << endl;
     nlohmann::json res;
-    res["action"] = "car_disconnected";
-    res["car_id"] = car->car_id;
+    res[ACTION] = CAR_DISCONNECTED;
+    res[CAR_ID] = car->car_id;
     ws->send_message(res.dump());
     remove_car(event->emitter);
 }
@@ -117,7 +121,6 @@ void PilotSession::add_car(CarSession* car_) {
 
 void PilotSession::remove_car(CarSession* car_) {
     this->car = nullptr;
-    //car_->remove_event_listener(shared_from_this());
 }
 
 PilotSessionManager::PilotSessionManager(asio::io_context& ctx)
@@ -132,18 +135,18 @@ void PilotSessionManager::init(const shared_ptr<CarSessionManager>& car_manager)
 
 void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
     cout << "PilotSessionManager: " <<  event->message << endl;
-    if(event->action == "close"){
+    if(event->action == CLOSE){
         on_close(event);
         return;
     }
     try {
         auto j = nlohmann::json::parse(event->message);
-        if(j["pilot_id"].empty() || j["action"].empty()) return;
-        if(ws_events.find(j["action"]) == ws_events.end()) return;
+        if(j[PILOT_ID].empty() || j[ACTION].empty()) return;
+        if(ws_events.find(j[ACTION]) == ws_events.end()) return;
 
-        if(j["action"] == "auth_session"){
+        if(j[ACTION] == AUTH_SESSION){
             on_auth_session(event, j);
-        } else if(j["action"] == "byebye"){
+        } else if(j[ACTION] == BYEBYE){
             on_stop_signal();
         }
     } catch (std::exception& e){
@@ -152,11 +155,11 @@ void PilotSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& ev
 }
 
 void PilotSessionManager::on_auth_session(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j) {
-    cout << "Auth session message is received, pilot_id: " << j["pilot_id"] << endl;
+    cout << "Auth session message is received, pilot_id: " << j[PILOT_ID] << endl;
     auto it = connections.begin();
     while(it != connections.end()){
         shared_ptr<PilotSession> session = *it;
-        if(session->pilot_id == str_to_uuid(j["pilot_id"])){
+        if(session->pilot_id == str_to_uuid(j[PILOT_ID])){
             cerr << "Pilot session exists" <<  endl;
             break;
         }
@@ -164,7 +167,11 @@ void PilotSessionManager::on_auth_session(const shared_ptr<Event<WebsocketManage
     }
     if(it == connections.end()){
         try{
-            auto session = make_shared<PilotSession>(str_to_uuid(j["pilot_id"]), (Websocket *)event->data, ctx, shared_from_this());
+            auto session = make_shared<PilotSession>(
+            str_to_uuid(j[PILOT_ID]),
+            (Websocket *)event->data, ctx,
+            shared_from_this()
+            );
             session->add_event_listener(shared_from_this());
             session->init();
             connections.push_back(session);
