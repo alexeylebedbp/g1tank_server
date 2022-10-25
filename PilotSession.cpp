@@ -26,7 +26,7 @@ void PilotSession::redirect_message_to_car(nlohmann::json& j) {
     if(car == nullptr){
         cerr << "Unable to find a car" << endl;
     } else {
-        cout << "Redirecting move command to a Car" << endl;
+        cout << "Redirecting message " << j[ACTION] << " to the Car" << endl;
         car->ws->send_message(j.dump());
     }
 }
