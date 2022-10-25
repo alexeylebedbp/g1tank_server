@@ -12,11 +12,11 @@ Websocket::Websocket(tcp::socket socket_, asio::io_context& ctx): socket(std::mo
 }
 
 void Websocket::on_message(const string &message) {
-    if(message == "__pong__") {
+    if(message == PONG) {
         pingpong->on_received(message);
         return;
     }
-    emit_event("message", message, (void*) this);
+    emit_event(MESSAGE, message, (void*) this);
 }
 
 void Websocket::send_message(const string& message) {
@@ -26,7 +26,7 @@ void Websocket::send_message(const string& message) {
         } catch (std::exception& e){
             std::cerr << "Websocket::send_message() " << e.what() << endl;
             this->status = WebsocketStatus::closed;
-            this->emit_event("close");
+            this->emit_event(CLOSE);
         }
     }
 }
@@ -44,7 +44,7 @@ void Websocket::read() {
                      if (e) {std::rethrow_exception(e);}
                  } catch(const std::exception& e) {
                      self->status = WebsocketStatus::closed;
-                     self->emit_event("close");
+                     self->emit_event(CLOSE);
                      std::cerr << "Coro exception " << "Websocket::read() " << e.what() << endl;
                  }
              }
@@ -72,12 +72,12 @@ void Websocket::PingPong::on_received(const string& message){
     cout << "PingPong latency, milliseconds: " << (last_received - last_sent) << endl;
 
     if(last_received - last_sent > 200){
-        ws->send_message("poor_network_detected");
+        ws->send_message(POOR_NETWORK_DETECTED);
     }
 
     latency_timer.expires_from_now( boost::posix_time::seconds(ping_pong_timeout));
     latency_timer.async_wait([this](const boost::system::error_code&){
-        ws->send_message("__ping__");
+        ws->send_message(PING);
         last_sent = ms_timestamp();
     });
 
@@ -87,7 +87,7 @@ void Websocket::PingPong::on_received(const string& message){
             cout <<"No response from WS client, disconnecting..." << endl;
             ws->status = WebsocketStatus::closed;
             ws->socket.close();
-            ws->emit_event("close");
+            ws->emit_event(CLOSE);
         }
     });
 }
@@ -112,7 +112,7 @@ void WebsocketManager::on_open(const shared_ptr<Websocket>& websocket) {
     add_connection(websocket);
     websocket->status = WebsocketStatus::connected;
     websocket->add_event_listener(shared_from_this());
-    websocket->send_message("__ping__");
+    websocket->send_message(PING);
     websocket->pingpong->last_sent = ms_timestamp();
     websocket->read();
 }
@@ -128,7 +128,7 @@ WebsocketManager::WebsocketManager(asio::io_context &ctx, int port):ctx(ctx), po
 
 
 void WebsocketManager::on_event(const shared_ptr<Event<Websocket>>& event) {
-    if (event->action == "close") {
+    if (event->action == CLOSE) {
         cout << "WebsocketManager unsubscribe on WS CLOSE event" << endl;
         event->emitter->remove_event_listener(shared_from_this());
     }

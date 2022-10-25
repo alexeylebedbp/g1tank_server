@@ -21,13 +21,16 @@ void CarSession::redirect_message_to_pilot(const nlohmann::json& j) const {
 }
 
 void CarSession::on_event(const shared_ptr<Event<Websocket>>& event) {
-    cout << "CarSession WS event: " << event->message << endl;
+    cout << "CarSession WS event: " << event->action << " " << event->message << endl;
+    if(event->action == CLOSE || event->message.empty()){
+        return;
+    }
 
     auto j = nlohmann::json::parse(event->message);
-    if (j["car_id"].empty() || j["action"].empty()) return;
-    if(ws_events.find(j["action"]) == ws_events.end()) return;
+    if (j[CAR_ID].empty() || j[ACTION].empty()) return;
+    if(ws_events.find(j[ACTION]) == ws_events.end()) return;
 
-    if (j["action"] == "webrtc_offer") {
+    if (j[ACTION] == WEBRTC_OFFER) {
         on_webrtc_offer(event, j);
     }
 }
@@ -47,17 +50,17 @@ void CarSessionManager::init(const shared_ptr<PilotSessionManager>& pilot_sessio
 
 void CarSessionManager::on_event(const shared_ptr<Event<WebsocketManager>>& event) {
 
-    if(event->action == "close"){
+    if(event->action == CLOSE){
         on_close(event);
         return;
     }
 
     cout << "CarSessionManager WS Event: " <<  event->message << endl;
     auto j = nlohmann::json::parse(event->message);
-    if(j["car_id"].empty() || j["action"].empty()) return;
-    if(ws_events.find(j["action"]) == ws_events.end()) return;
+    if(j[CAR_ID].empty() || j[ACTION].empty()) return;
+    if(ws_events.find(j[ACTION]) == ws_events.end()) return;
 
-    if(j["action"] == "auth_session"){
+    if(j[ACTION] == AUTH_SESSION){
         on_auth_session(event, j);
     }
 }
@@ -75,11 +78,11 @@ void CarSessionManager::on_close(const shared_ptr<Event<WebsocketManager>>& even
 }
 
 void CarSessionManager::on_auth_session(const shared_ptr<Event<WebsocketManager>>& event, nlohmann::json& j) {
-    cout << "Auth session message is received, car_id: " << j["car_id"] << endl;
+    cout << "Auth session message is received, car_id: " << j[CAR_ID] << endl;
     auto it = connections.begin();
     while(it != connections.end()){
         shared_ptr<CarSession> session = *it;
-        if(session->car_id == str_to_uuid(j["car_id"])){
+        if(session->car_id == str_to_uuid(j[CAR_ID])){
             cerr << "Car session exists" <<  endl;
             break;
         }
@@ -89,9 +92,9 @@ void CarSessionManager::on_auth_session(const shared_ptr<Event<WebsocketManager>
         try{
             cout << "Creating a new car session" <<  endl;
             auto ws = shared_ptr<Websocket>((Websocket *)event->data);
-            auto session = make_shared<CarSession>(str_to_uuid(j["car_id"]), ws, ctx);
+            auto session = make_shared<CarSession>(str_to_uuid(j[CAR_ID]), ws, ctx);
             nlohmann::json j;
-            j["action"] = "auth_accept";
+            j[ACTION] = AUTH_ACCEPT;
             session->ws->send_message(j.dump());
             session->add_event_listener(shared_from_this());
             ws->add_event_listener(session);

@@ -16,6 +16,7 @@
 #include "coroutine_err_handler.h"
 #include "Event.h"
 #include "uuid.h"
+#include "constants.h"
 
 using namespace std;
 using ws_stream = beast::websocket::stream<tcp::socket&>;
@@ -36,8 +37,8 @@ private:
     struct PingPong {
         int last_sent{0};
         int last_received{0};
-        int disconnect_timeout {20};
-        int ping_pong_timeout {5};
+        int disconnect_timeout {DISCONNECT_TIMEOUT};
+        int ping_pong_timeout {PING_PONG_TIMEOUT};
         void on_received(const string& message);
         Websocket* ws;
         explicit PingPong(Websocket*);
