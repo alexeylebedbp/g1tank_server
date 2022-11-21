@@ -6,24 +6,21 @@
 
 Server::Server()
     :car_sessions(make_shared<CarSessionManager>(ctx)),
-     pilot_sessions(make_shared<PilotSessionManager>(ctx))
-{
-    pilot_sessions->server = this;
-}
+     pilot_sessions(make_shared<PilotSessionManager>(ctx)){}
 
 void Server::run() {
     boost::asio::signal_set signals(ctx, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto){ctx.stop();});
-    car_sessions->init(pilot_sessions);
-    pilot_sessions->init(car_sessions);
+    car_sessions->init();
+    pilot_sessions->init(car_sessions, this);
     car_sessions->ws_connections->listen();
     pilot_sessions->ws_connections->listen();
     ctx.run();
 }
 
 void Server::stop() {
-    car_sessions->ws_connections->is_running = false;
-    pilot_sessions->ws_connections->is_running = false;
+    car_sessions->stop();
+    pilot_sessions->stop();
     ctx.stop();
 };
 

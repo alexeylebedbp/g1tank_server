@@ -29,10 +29,6 @@ public:
     WebsocketStatus status {WebsocketStatus::created};
     void send_message(const string& message);
 
-    ~Websocket(){
-        cout << "WS destructor is called" << endl;
-    }
-
 private:
     struct PingPong {
         int last_sent{0};
@@ -46,17 +42,16 @@ private:
         boost::asio::deadline_timer timeout;
     };
 
-    PingPong* pingpong {nullptr};
+    shared_ptr<PingPong> pingpong {nullptr};
+    shared_ptr<ws_stream> transport {nullptr};
     asio::io_context& ctx;
     beast::flat_buffer buffer;
     tcp::socket socket;
-    ws_stream* transport {nullptr};
 
     void on_message(const string& message);
     awaitable<void>wait_and_read();
     awaitable<void> send(const string& message);
     void read();
-
     friend class WebsocketManager;
 
 };
@@ -71,12 +66,13 @@ public:
     WebsocketManager(asio::io_context& ctx, int  port);
     void listen();
     bool is_running {true};
+    void stop();
 private:
     asio::io_context& ctx;
     awaitable<void> listener();
     const int port;
     void on_open(const shared_ptr<Websocket>& ws);
-    void on_event(const shared_ptr<Event<Websocket>>& event) override;
+    void on_event(Event<Websocket>* event) override;
 };
 
 
