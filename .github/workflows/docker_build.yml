@@ -1,4 +1,4 @@
-name: Build on Ubuntu Docker Image
+name: Build on Ubuntu Docker Image v1
 on:
   pull_request:
     types: [opened, synchronize, reopened]
