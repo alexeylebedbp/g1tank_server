@@ -3,19 +3,29 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
-  mobile-build-and-commit-archives:
-    runs-on: self-hosted
+  g1tank_server_build:
+    runs-on: g1tank_server_runner
+    container: alexeylebed87/ubuntu_with_boost
     steps:
-      - name: CHECKOUT ACTION
+      - name: CHECKOUT GITHUB-ACTION
         uses: actions/checkout@v3
       - name: CHECKOUT HEAD
         run : |
-          git config --global user.email "github_actions@brightpattern.com"
-          git config --global user.name "alexey_lebed_actions"
+          git config --global user.email "github_actions@g1tank_server.com"
+          git config --global user.name "g1stank_server_actions"
           git fetch
           git checkout ${{ github.event.pull_request.head.ref }}
-          chmod +x ./scripts/*.sh
-          git push origin --delete ${{ github.event.pull_request.head.ref }}${{ env.IPA }} || true
-          git switch -c ${{ github.event.pull_request.head.ref }}${{ env.IPA }} || 
-          git switch ${{ github.event.pull_request.head.ref }}${{ env.IPA }}
+          git push origin --delete ${{ github.event.pull_request.head.ref }} || true
+          git switch -c ${{ github.event.pull_request.head.ref }} || 
+          git switch ${{ github.event.pull_request.head.ref }}
+      - name: INSTALL THIRD PARTY LIBS
+        run: |
+          mkdir third_party
+          cd third_party
+          git clone https://github.com/nlohmann/json.git
+          cd ../
+      - name: BUILD
+        run: |
+          cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-10 -DCMAKE_CXX_COMPILER=/usr/bin/g++-10  . .
+          make
     
