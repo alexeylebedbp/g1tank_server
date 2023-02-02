@@ -7,11 +7,12 @@ jobs:
     runs-on: g1tank_server_runner
     container: alexeylebed87/ubuntu_with_boost
     steps:
+      - name: SSL VERIFY FALSE
+        run: git config --global http.sslverify false
       - name: CHECKOUT GITHUB-ACTION
         uses: actions/checkout@v3
       - name: CHECKOUT HEAD
         run : |
-          git config --global http.sslverify false
           git config --global user.email "github_actions@g1tank_server.com"
           git config --global user.name "g1stank_server_actions"
           git fetch
