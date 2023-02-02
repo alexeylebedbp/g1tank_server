@@ -17,9 +17,6 @@ jobs:
           git config --global user.name "g1stank_server_actions"
           git fetch
           git checkout ${{ github.event.pull_request.head.ref }}
-          git push origin --delete ${{ github.event.pull_request.head.ref }} || true
-          git switch -c ${{ github.event.pull_request.head.ref }} || 
-          git switch ${{ github.event.pull_request.head.ref }}
       - name: INSTALL THIRD PARTY LIBS
         run: |
           mkdir third_party
