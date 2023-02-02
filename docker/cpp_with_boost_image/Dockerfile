@@ -1,3 +1,5 @@
+#Docker Hub Image name: alexeylebed87/ubuntu_with_boost
+
 FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -30,18 +32,5 @@ RUN \
     && ./bootstrap.sh \
     && ./b2 install
 
-RUN \
-    export GIT_SSL_NO_VERIFY=1 \
-    && git clone https://github.com/alexeylebedbp/g1tank_server.git \
-    && cd g1tank_server \
-    && mkdir third_party \
-    && cd third_party \
-    && git clone https://github.com/nlohmann/json.git \
-    && cd ../ \
-    && cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-10 -DCMAKE_CXX_COMPILER=/usr/bin/g++-10  . . \
-    && make
-
-
-CMD g1tank_server/G1Tank
-
+CMD echo "Ubuntu 20.04 with gcc-10 and boost docker image"
 
