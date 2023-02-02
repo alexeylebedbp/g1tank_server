@@ -34,5 +34,5 @@ jobs:
         run: |
           ./G1Tank&
           sleep 2
-          killall -9 G1Tank
+          pkill -9 G1Tank
     
