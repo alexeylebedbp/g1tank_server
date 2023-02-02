@@ -33,6 +33,6 @@ jobs:
       - name: RUN
         run: |
           ./G1Tank&
-          sleep 200
+          sleep 2
           killall -9 G1Tank
     
