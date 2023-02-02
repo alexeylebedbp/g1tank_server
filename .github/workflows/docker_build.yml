@@ -7,9 +7,9 @@ jobs:
     runs-on: g1tank_server_runner
     container: alexeylebed87/ubuntu_with_boost
     steps:
-      - name: SSL VERIFY FALSE
+      - name: GIT SET SSL VERIFY FALSE
         run: git config --global http.sslverify false
-      - name: CHECKOUT GITHUB-ACTION
+      - name: CHECKOUT GITHUB ACTION
         uses: actions/checkout@v3
       - name: CHECKOUT HEAD
         run : |
@@ -30,4 +30,8 @@ jobs:
         run: |
           cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-10 -DCMAKE_CXX_COMPILER=/usr/bin/g++-10  . .
           make
+      - name: RUN
+        run: |
+          ./G1Tank&
+          killall -9 G1Tank
     
