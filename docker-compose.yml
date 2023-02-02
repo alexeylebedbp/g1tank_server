@@ -1,0 +1,6 @@
+version: '3'
+services:
+  g1tank-server:
+    image: alexeylebed87/g1tank_server
+    ports:
+      - "8081:8081"
