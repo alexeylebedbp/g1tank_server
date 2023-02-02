@@ -1,4 +1,4 @@
-name: Build on Ubuntu Docker Image
+name: Build on Ubuntu Docker Image v2
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -7,7 +7,9 @@ jobs:
     runs-on: g1tank_server_runner
     container: alexeylebed87/ubuntu_with_boost
     steps:
-      - name: CHECKOUT GITHUB-ACTION
+      - name: GIT SET SSL VERIFY FALSE
+        run: git config --global http.sslverify false
+      - name: CHECKOUT GITHUB ACTION
         uses: actions/checkout@v3
       - name: CHECKOUT HEAD
         run : |
@@ -15,9 +17,6 @@ jobs:
           git config --global user.name "g1stank_server_actions"
           git fetch
           git checkout ${{ github.event.pull_request.head.ref }}
-          git push origin --delete ${{ github.event.pull_request.head.ref }} || true
-          git switch -c ${{ github.event.pull_request.head.ref }} || 
-          git switch ${{ github.event.pull_request.head.ref }}
       - name: INSTALL THIRD PARTY LIBS
         run: |
           mkdir third_party
@@ -28,4 +27,9 @@ jobs:
         run: |
           cmake -DCMAKE_C_COMPILER=/usr/bin/gcc-10 -DCMAKE_CXX_COMPILER=/usr/bin/g++-10  . .
           make
+      - name: RUN
+        run: |
+          ./G1Tank&
+          sleep 2
+          pkill -9 G1Tank
     
