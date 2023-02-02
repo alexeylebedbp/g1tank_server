@@ -1,0 +1,21 @@
+name: Build on Ubuntu Docker Image
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+jobs:
+  mobile-build-and-commit-archives:
+    runs-on: self-hosted
+    steps:
+      - name: CHECKOUT ACTION
+        uses: actions/checkout@v3
+      - name: CHECKOUT HEAD
+        run : |
+          git config --global user.email "github_actions@brightpattern.com"
+          git config --global user.name "alexey_lebed_actions"
+          git fetch
+          git checkout ${{ github.event.pull_request.head.ref }}
+          chmod +x ./scripts/*.sh
+          git push origin --delete ${{ github.event.pull_request.head.ref }}${{ env.IPA }} || true
+          git switch -c ${{ github.event.pull_request.head.ref }}${{ env.IPA }} || 
+          git switch ${{ github.event.pull_request.head.ref }}${{ env.IPA }}
+    
